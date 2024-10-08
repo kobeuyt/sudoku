@@ -96,7 +96,6 @@ extern "C"
 
     void FreeMem(char* str)
     {
-        std::cout << "Attempting to free " << &str << std::endl;
         free(str);
     }
 }

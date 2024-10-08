@@ -2,6 +2,7 @@
 
 import ctypes
 import os
+import platform
 import sys
 from PyQt6 import QtWidgets, QtCore, QtGui
 
@@ -25,7 +26,7 @@ class SudokuWindow(QtWidgets.QMainWindow):
         self.board_layout = None
         self.board_size_policy = None
 
-        self.sudoku_lib = ctypes.CDLL(os.path.join(LIB_DIR, "libSudokuPy.so"))
+        self.sudoku_lib = ctypes.CDLL(os.path.join(LIB_DIR, "libSudokuPy") + self.get_lib_ext())
         self.sudoku_lib.Solve.restype = ctypes.c_void_p
         self.sudoku_lib.Solve.argtypes = (ctypes.c_char_p,)
 
@@ -104,6 +105,18 @@ class SudokuWindow(QtWidgets.QMainWindow):
         for row in range(9):
             for col in range(9):
                 self.board_layout.itemAtPosition(row, col).widget().setText("")
+
+
+    def get_lib_ext(self):
+        system = platform.system()
+        if system == "Linux":
+            return ".so"
+        elif system == "Darwin":
+            return ".dylib"
+        elif system == "Windows":
+            return ".dll"
+        else:
+            return None
 
 
 def main():
