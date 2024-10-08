@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/home/kobeuyt/dev/bin/python3
 
 import ctypes
 import os
@@ -25,11 +25,12 @@ class SudokuWindow(QtWidgets.QMainWindow):
         self.board_layout = None
         self.board_size_policy = None
 
-        # self.set_board = ctypes.CDLL(os.path.join(LIB_DIR, "libSudokuPy.dylib")).SetBoard
-        # self.set_board.restype = None
+        self.sudoku_lib = ctypes.CDLL(os.path.join(LIB_DIR, "libSudokuPy.so"))
+        self.sudoku_lib.Solve.restype = ctypes.c_void_p
+        self.sudoku_lib.Solve.argtypes = (ctypes.c_char_p,)
 
         self.setup_ui()
-        self.solve_button.clicked.connect(lambda: self.save_board())
+        self.solve_button.clicked.connect(self.solve_board)
         self.clear_button.clicked.connect(self.clear_board)
 
 
@@ -81,27 +82,22 @@ class SudokuWindow(QtWidgets.QMainWindow):
         self.show()
 
     
-    def save_board(self, save_directory=""):
-        file_name = "board1"
-        file_ext = ".txt"
-        file_path = os.path.join(save_directory, file_name) + file_ext
-        file_dup = 0
-
-        # while os.path.exists(file_path):
-        #     file_dup += 1
-        #     file_path = os.path.join(save_directory, file_name + str(file_dup)) + file_ext
-
-        with open(file_path, "w") as file_writer:
-            for row in range(9):
-                line = []
-                for col in range(9):
-                    cell = self.board_layout.itemAtPosition(row, col).widget().text()
-                    if cell == "":
-                        cell = "0"
-                    line.append(cell)
-                file_writer.write(" ".join(line))
-                file_writer.write("\n")
-            file_writer.close()
+    def solve_board(self):
+        myBoard = ""
+        for row in range(9):
+            for col in range(9):
+                cell = self.board_layout.itemAtPosition(row, col).widget().text()
+                if not cell: 
+                    cell = "."
+                myBoard += cell
+        solvedBoardPtr = self.sudoku_lib.Solve(myBoard.encode("utf-8"))
+        solvedBoard = ctypes.string_at(ctypes.cast(solvedBoardPtr, ctypes.c_char_p)).decode("utf-8")
+        self.sudoku_lib.FreeMem(solvedBoardPtr)
+        solvedIndex = 0
+        for row in range(9):
+            for col in range(9):
+                self.board_layout.itemAtPosition(row, col).widget().setText(solvedBoard[solvedIndex])
+                solvedIndex += 1
 
 
     def clear_board(self):

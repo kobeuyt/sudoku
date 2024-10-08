@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <cstring>
 
 SudokuBoard::SudokuBoard():
     board(),
@@ -23,7 +24,8 @@ bool SudokuBoard::ReadBoardInput(const std::string& filepath)
     {
         std::ifstream file;
         file.open(filepath);
-        std::string line, token;
+        std::string line;
+        char token;
         int row = 0;
 
         // Loop through file while we have input to read
@@ -32,12 +34,12 @@ bool SudokuBoard::ReadBoardInput(const std::string& filepath)
             // Grab next line of file to be processed
             std::getline(file, line);
             std::istringstream stream(line);
-            std::vector<int> input;
+            std::vector<char> input;
 
             // istringstream automatically delimits whitespace
             while (stream >> token)
             {
-                input.push_back(std::stoi(token));
+                input.push_back(token);
             }
 
             // Copy input into row
@@ -56,28 +58,52 @@ bool SudokuBoard::ReadBoardInput(const std::string& filepath)
     return false;
 }
 
-extern "C" 
+void SudokuBoard::ReadBoardFromString(const std::string& boardStr)
 {
-    void SudokuBoard::SetBoard()
+    size_t index = 0;
+    for (size_t row = 0; row < 9; row++)
     {
-        int length = 0;
-        if (length != 81)
+        for (size_t col = 0; col < 9; col++)
         {
-            std::cerr << "ERROR: Must pass a list of length 81." << std::endl;
+            board[row][col] = boardStr[index];
+            index++;
         }
-        else
+    }
+}
+
+extern "C" 
+{    
+    const char* Solve(char* boardIn)
+    {
+        auto myBoard = SudokuBoard();
+        std::string boardStr(boardIn);
+        std::string solvedBoard = "";
+
+        myBoard.ReadBoardFromString(boardStr);
+        myBoard.SolveBoard();
+
+        for (size_t row = 0; row < 9; row++)
         {
-            for (auto row = 0; row < 9; row++)
+            for (size_t col = 0; col < 9; col++)
             {
-                for (auto col = 0; col < 9; col++)
-                {
-                    board[row][col] = length;
-                    length++;
-                }
+                solvedBoard += myBoard.GetBoard()[row][col];
             }
         }
-        PrintBoard();
+
+        const char* cstr = strdup(solvedBoard.c_str());
+        return cstr;
     }
+
+    void FreeMem(char* str)
+    {
+        std::cout << "Attempting to free " << &str << std::endl;
+        free(str);
+    }
+}
+
+array<array<char,9>,9>& SudokuBoard::GetBoard()
+{
+    return board;
 }
 
 size_t SudokuBoard::GetCell(const size_t& row, const size_t& col)
@@ -87,25 +113,25 @@ size_t SudokuBoard::GetCell(const size_t& row, const size_t& col)
 
 void SudokuBoard::SolveBoard()
 {
+    char num;
+    size_t state;
     for (size_t row = 0; row < board.size(); row++)
     {
         for (size_t col = 0; col < board[row].size(); col++)
         {
-            size_t num;
-            if ((num = board[row][col]) != 0)
+            if ((num = board[row][col]) != '.')
             {
-                rows_state[row].set(num - 1);
-                cols_state[col].set(num - 1);
-                cell_state[GetCell(row, col)].set(num - 1);
+                state = num - '1';
+                rows_state[row].set(state);
+                cols_state[col].set(state);
+                cell_state[GetCell(row, col)].set(state);
             }
         }
     }
     Solve(board, 0, 0, rows_state, cols_state, cell_state);
-
-    PrintBoard();
 }
 
-bool SudokuBoard::Solve(array<array<int,9>,9>& unsolvedBoard,
+bool SudokuBoard::Solve(array<array<char,9>,9>& unsolvedBoard,
                         size_t rowStart,
                         size_t colStart,
                         array<bitset<9>,9>& rowContains,
@@ -130,7 +156,7 @@ bool SudokuBoard::Solve(array<array<int,9>,9>& unsolvedBoard,
     {
         if (!contains[num])
         {
-            unsolvedBoard[row][col] = num + 1;
+            unsolvedBoard[row][col] = static_cast<char>(num + '1');
             rowContains[row].set(num);
             colContains[col].set(num);
             cellContains[cell].set(num);
@@ -144,17 +170,17 @@ bool SudokuBoard::Solve(array<array<int,9>,9>& unsolvedBoard,
             cellContains[cell].reset(num);
         }
     }
-    unsolvedBoard[row][col] = 0;
+    unsolvedBoard[row][col] = '.';
     return false;
 }
 
-std::pair<size_t, size_t> SudokuBoard::NextEmptyPosition(array<array<int,9>,9>& unsolvedBoard, 
+std::pair<size_t, size_t> SudokuBoard::NextEmptyPosition(array<array<char,9>,9>& unsolvedBoard, 
                                                          size_t& row, 
                                                          size_t& col)
 {
     while (row != 9)
     {
-        if (unsolvedBoard[row][col] == 0)
+        if (unsolvedBoard[row][col] == '.')
         {
             return {row, col};
         }
