@@ -1,4 +1,4 @@
-#!/home/kobeuyt/dev/bin/python3
+#!/usr/bin/env python
 
 import ctypes
 import os
