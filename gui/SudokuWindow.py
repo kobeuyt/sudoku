@@ -11,7 +11,16 @@ BASE_DIR = os.path.dirname(GUI_DIR)
 LIB_DIR = os.path.join(BASE_DIR, "bin")
 
 class SudokuWindow(QtWidgets.QMainWindow):
+    """SudokuWindow.py is a front end GUI that
+    leverages the C++ libSudokuPy to solve sudoku
+    puzzles.
+    """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self):
+        """Initialize the SudokuWindow class
+        Calls the constructor for QMainWindow which
+        SudokuWindow derives from.
+        """
         super().__init__()
         self.main_widget = None
         self.main_layout = None
@@ -36,8 +45,9 @@ class SudokuWindow(QtWidgets.QMainWindow):
 
 
     def setup_ui(self):
+        """Creates all the PyQt components of the GUI."""
         self.board_layout = QtWidgets.QGridLayout()
-        
+
         for row in range(9):
             for col in range(9):
                 cell = QtWidgets.QLineEdit()
@@ -66,11 +76,12 @@ class SudokuWindow(QtWidgets.QMainWindow):
 
         self.clear_button = QtWidgets.QPushButton()
         self.clear_button.setText("Clear")
-        
+
         self.button_layout.addWidget(self.clear_button)
 
         self.main_layout = QtWidgets.QGridLayout()
-        self.main_layout.addWidget(QtWidgets.QLabel("Sudoku Solver"), 0, 0, 0, 2, QtCore.Qt.AlignmentFlag.AlignTop)
+        self.main_layout.addWidget(QtWidgets.QLabel("Sudoku Solver"), 0, 0, 0, 2,
+                                   QtCore.Qt.AlignmentFlag.AlignTop)
         self.main_layout.addWidget(self.board_widget, 1, 0)
         self.main_layout.addLayout(self.button_layout, 1, 1)
 
@@ -80,50 +91,55 @@ class SudokuWindow(QtWidgets.QMainWindow):
 
         self.setCentralWidget(self.main_widget)
         self.setWindowTitle("Sudoku Solver")
-        self.show()
 
-    
+
     def solve_board(self):
-        myBoard = ""
+        """Solves the board utilizing libSudokuPy loaded from ctypes"""
+        my_board = ""
         for row in range(9):
             for col in range(9):
                 cell = self.board_layout.itemAtPosition(row, col).widget().text()
-                if not cell: 
+                if not cell:
                     cell = "."
-                myBoard += cell
-        solvedBoardPtr = self.sudoku_lib.Solve(myBoard.encode("utf-8"))
-        solvedBoard = ctypes.string_at(ctypes.cast(solvedBoardPtr, ctypes.c_char_p)).decode("utf-8")
-        self.sudoku_lib.FreeMem(solvedBoardPtr)
-        solvedIndex = 0
+                my_board += cell
+        solved_board_ptr = self.sudoku_lib.Solve(my_board.encode("utf-8"))
+        solved_board = ctypes.string_at(ctypes.cast(
+            solved_board_ptr, ctypes.c_char_p)).decode("utf-8")
+        self.sudoku_lib.FreeMem(solved_board_ptr)
+        solved_index = 0
         for row in range(9):
             for col in range(9):
-                self.board_layout.itemAtPosition(row, col).widget().setText(solvedBoard[solvedIndex])
-                solvedIndex += 1
+                self.board_layout.itemAtPosition(
+                    row, col).widget().setText(solved_board[solved_index])
+                solved_index += 1
 
 
     def clear_board(self):
+        """Resets the board to solve another puzzle."""
         for row in range(9):
             for col in range(9):
                 self.board_layout.itemAtPosition(row, col).widget().setText("")
 
 
     def get_lib_ext(self):
+        """Returns the OS-specific file extension for shared library"""
         system = platform.system()
         if system == "Linux":
             return ".so"
-        elif system == "Darwin":
+        if system == "Darwin":
             return ".dylib"
-        elif system == "Windows":
+        if system == "Windows":
             return ".dll"
-        else:
-            return None
+        return None
 
 
 def main():
+    """Main GUI function to start the app."""
     app = QtWidgets.QApplication(sys.argv)
     main_window = SudokuWindow()
+    main_window.show()
 
-    return(app.exec())
+    return app.exec()
 
 if __name__ == "__main__":
 
